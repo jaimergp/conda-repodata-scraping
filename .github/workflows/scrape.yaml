@@ -1,0 +1,100 @@
+name: Scrape latest data
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    # hourly, at xx:17
+    - cron: '17 * * * *'
+
+jobs:
+  scheduled:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out this repo
+      uses: actions/checkout@v2
+    - name: Fetch latest data
+      run: |
+        set -euo pipefail
+
+        repodatas=( \
+            "https://conda.anaconda.org/conda-forge/linux-32/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/linux-64/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/linux-aarch64/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/linux-armv6l/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/linux-armv7l/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/linux-ppc64le/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/noarch/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/osx-64/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/osx-arm64/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/win-32/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/win-64/repodata.json.bz2"
+            "https://conda.anaconda.org/conda-forge/zos-z/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/linux-32/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/linux-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/linux-aarch64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/linux-armv6l/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/linux-armv7l/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/linux-ppc64le/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/linux-s390x/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/noarch/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/osx-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/osx-arm64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/win-32/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/win-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/main/zos-z/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/linux-32/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/linux-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/linux-armv6l/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/linux-ppc64le/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/noarch/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/osx-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/win-32/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/win-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/msys2/zos-z/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/linux-32/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/linux-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/linux-aarch64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/linux-armv6l/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/linux-armv7l/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/linux-ppc64le/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/linux-s390x/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/noarch/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/osx-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/win-32/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/win-64/repodata.json.bz2"
+            "https://repo.anaconda.com/pkgs/r/zos-z/repodata.json.bz2"
+        )
+
+        for url in ${repodatas[@]}; do
+            dir=$(dirname $url)
+            subdir=$(basename $dir)
+            channel=$(basename $(dirname $dir))
+            echo "Retrieving $url (channel=$channel, subdir=$subdir)"
+            mkdir -p data/$channel/$subdir
+            curl -s $url | bunzip2 | jq . > data/$channel/$subdir/repodata.json
+            sleep 1
+        done
+
+        channeldatas=( \
+            "https://conda.anaconda.org/conda-forge/channeldata.json"
+            "https://repo.anaconda.com/pkgs/main/channeldata.json"
+            "https://repo.anaconda.com/pkgs/msys2/channeldata.json"
+            "https://repo.anaconda.com/pkgs/r/channeldata.json"
+        )
+        for url in ${channeldatas[@]}; do
+            channel=$(basename $(dirname $url))
+            echo "Retrieving $url (channel=$channel, subdir=$subdir)"
+            mkdir -p data/$channel
+            curl -s $url | bunzip2 | jq . > data/$channel/channeldata.json
+            sleep 1
+        done
+
+    - name: Commit and push if it changed
+      run: |
+        git config user.name "Automated"
+        git config user.email "actions@users.noreply.github.com"
+        git add -A
+        timestamp=$(date -u)
+        git commit -m "Latest data: ${timestamp}" || exit 0
+        git push
