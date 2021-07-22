@@ -86,7 +86,7 @@ jobs:
             channel=$(basename $(dirname $url))
             echo "Retrieving $url (channel=$channel, subdir=$subdir)"
             mkdir -p data/$channel
-            curl -s $url | bunzip2 | jq . > data/$channel/channeldata.json
+            curl -s $url | jq . > data/$channel/channeldata.json
             sleep 1
         done
 
