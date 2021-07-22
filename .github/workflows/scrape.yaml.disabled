@@ -84,7 +84,7 @@ jobs:
         )
         for url in ${channeldatas[@]}; do
             channel=$(basename $(dirname $url))
-            echo "Retrieving $url (channel=$channel, subdir=$subdir)"
+            echo "Retrieving $url (channel=$channel)"
             mkdir -p data/$channel
             curl -s $url | jq . > data/$channel/channeldata.json
             sleep 1
